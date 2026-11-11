@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaxiFlow | Mobility Analytics</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Segoe UI,Arial,sans-serif}
+body{background:#050505;color:#fff;min-height:100vh}
+.app{display:flex;min-height:100vh}
+.sidebar{width:250px;background:#090909;border-right:1px solid #202020;padding:27px 17px;flex-shrink:0}
+.logo{font-size:24px;font-weight:800;color:#38bdf8;margin-bottom:42px}
+.logo span{color:white}
+.small-title{font-size:11px;color:#666;letter-spacing:2px;margin:25px 12px 12px}
+.nav{display:flex;flex-direction:column;gap:9px}
+.nav button{width:100%;padding:15px 13px;background:transparent;border:1px solid transparent;color:#999;text-align:left;border-radius:10px;font-size:14px;cursor:pointer;transition:.25s}
+.nav button:hover{background:#101b27;color:#38bdf8}
+.nav button.active{background:linear-gradient(100deg,#102d42,#111);border-color:#164866;color:#38bdf8;box-shadow:0 0 18px #0284c722}
+.nav button span{margin-right:12px;font-size:17px}
+.sidebar-bottom{margin-top:65px;background:#101010;border:1px solid #222;padding:17px;border-radius:12px}
+.sidebar-bottom p{font-size:12px;color:#888;margin-top:10px}
+.green{color:#4ade80}
+.main{flex:1;min-width:0;padding:30px 35px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:32px}
+.topbar h1{font-size:25px;font-weight:650}
+.topbar p{color:#777;font-size:13px;margin-top:7px}
+.top-right{display:flex;align-items:center;gap:15px}
+.live{border:1px solid #174b36;background:#0b1c14;color:#4ade80;padding:9px 14px;border-radius:25px;font-size:11px}
+.clock{color:#888;font-size:12px}
+.page{display:none;animation:show .4s ease}
+.page.active{display:block}
+@keyframes show{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.welcome{background:linear-gradient(110deg,#101f2b,#101010 70%);border:1px solid #23394a;padding:30px;border-radius:16px;margin-bottom:23px;position:relative;overflow:hidden}
+.welcome:after{content:"🚕";position:absolute;right:45px;top:25px;font-size:85px;opacity:.18}
+.welcome h2{font-size:25px;margin-bottom:10px}
+.welcome p{color:#999;font-size:14px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:17px;margin-bottom:23px}
+.card{background:#101010;border:1px solid #242424;border-radius:14px;padding:21px;transition:.3s}
+.card:hover{border-color:#1685b7;transform:translateY(-4px);box-shadow:0 8px 25px #0088cc12}
+.card .symbol{font-size:23px;margin-bottom:15px}
+.card p{font-size:13px;color:#888}
+.card h2{font-size:27px;margin:10px 0}
+.up{font-size:11px;color:#4ade80}
+.down{font-size:11px;color:#fbbf24}
+.grid{display:grid;grid-template-columns:1.5fr 1fr;gap:18px}
+.panel{background:#101010;border:1px solid #242424;padding:23px;border-radius:14px;margin-bottom:20px;min-width:0}
+.panel h3{font-size:16px;margin-bottom:20px}
+.chart-box{height:260px;position:relative}
+.location{margin:23px 0}
+.loc-head{display:flex;justify-content:space-between;font-size:13px}
+.loc-head span:last-child{color:#38bdf8}
+.track{height:7px;background:#292929;border-radius:20px;margin-top:10px;overflow:hidden}
+.fill{height:100%;background:linear-gradient(90deg,#087bb7,#38bdf8);border-radius:20px}
+table{width:100%;border-collapse:collapse;min-width:600px}
+th,td{padding:16px 12px;border-bottom:1px solid #292929;text-align:left;font-size:13px}
+th{color:#777;font-weight:500}
+td{color:#ddd}
+.table-wrap{overflow-x:auto}
+.tag{padding:6px 11px;border-radius:20px;font-size:11px;background:#102c20;color:#4ade80}
+.pending{background:#33250b;color:#fbbf24}
+.btn{background:#0784c1;color:white;padding:11px 18px;border:0;border-radius:8px;cursor:pointer;margin-top:15px;font-size:13px}
+.btn:hover{background:#0ea5e9}
+.page-heading{margin-bottom:23px}
+.page-heading h2{font-size:23px;margin-bottom:8px}
+.page-heading p{color:#777;font-size:13px}
+.zone-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}
+.zone{background:#151515;border:1px solid #292929;padding:22px;border-radius:12px}
+.zone h3{font-size:16px;margin-bottom:12px}
+.zone strong{font-size:28px;color:#38bdf8}
+.zone p{color:#888;font-size:12px;margin-top:8px}
+.report-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:17px}
+.report{padding:22px;background:#141414;border:1px solid #282828;border-radius:12px}
+.report h3{font-size:15px;margin-bottom:12px}
+.report p{font-size:13px;color:#888;line-height:1.7}
+#loader{position:fixed;inset:0;background:#050505;z-index:1000;display:none;align-items:center;justify-content:center;flex-direction:column}
+.spinner{height:48px;width:48px;border:4px solid #222;border-top:4px solid #38bdf8;border-radius:50%;animation:spin .7s linear infinite}
+#loader p{margin-top:20px;color:#38bdf8;letter-spacing:2px;font-size:12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+footer{text-align:center;color:#555;padding:28px;font-size:12px}
+@media(max-width:950px){.stats{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
+@media(max-width:600px){
+.sidebar{width:68px;padding:20px 7px}
+.logo{font-size:12px;text-align:center}
+.logo span,.small-title,.nav button .label,.sidebar-bottom{display:none}
+.nav button{text-align:center;padding:13px 4px}
+.nav button span{margin:0}
+.main{padding:20px 12px}
+.topbar h1{font-size:19px}
+.clock{display:none}
+.welcome{padding:22px}
+.welcome:after{right:10px;font-size:55px}
+.stats{gap:10px}
+.card{padding:14px}
+.card h2{font-size:21px}
+.grid{grid-template-columns:1fr}
+.zone-grid,.report-grid{grid-template-columns:1fr}
+.panel{padding:16px}
+}
+</style>
+</head>
+
+<body>
+
+<div id="loader">
+<div class="spinner"></div>
+<p>LOADING PAGE...</p>
+</div>
+
+<div class="app">
+
+<aside class="sidebar">
+<div class="logo">🚕 TAXI<span>FLOW</span></div>
+
+<div class="small-title">MAIN MENU</div>
+
+<nav class="nav">
+<button class="active" data-page="dashboard" onclick="navigate('dashboard',this)">
+<span>▦</span><span class="label">Dashboard</span>
+</button>
+<button data-page="demand" onclick="navigate('demand',this)">
+<span>◈</span><span class="label">Demand Analysis</span>
+</button>
+<button data-page="locations" onclick="navigate('locations',this)">
+<span>⌖</span><span class="label">Taxi Locations</span>
+</button>
+<button data-page="bookings" onclick="navigate('bookings',this)">
+<span>▤</span><span class="label">Bookings</span>
+</button>
+<button data-page="reports" onclick="navigate('reports',this)">
+<span>▧</span><span class="label">Reports</span>
+</button>
+</nav>
+
+<div class="sidebar-bottom">
+<strong>System Status</strong>
+<p class="green">● All Systems Operational</p>
+<p>TaxiFlow Analytics v1.0</p>
+</div>
+</aside>
+
+<main class="main">
+
+<header class="topbar">
+<div>
+<h1 id="pageTitle">Dashboard Overview</h1>
+<p>Real-Time Taxi Demand & Mobility Analytics</p>
+</div>
+<div class="top-right">
+<span class="clock" id="clock"></span>
+<div class="live">● LIVE SYSTEM</div>
+</div>
+</header>
+
+<!-- DASHBOARD PAGE -->
+<section class="page active" id="dashboard">
+
+<div class="welcome">
+<h2>Welcome to TaxiFlow 👋</h2>
+<p>Monitor taxi demand, bookings and mobility performance in one place.</p>
+</div>
+
+<div class="stats">
+<div class="card"><div class="symbol">🚕</div><p>Total Requests</p><h2 id="requests">1,250</h2><span class="up">↑ 12.5% this week</span></div>
+<div class="card"><div class="symbol">🚖</div><p>Available Taxis</p><h2 id="taxis">320</h2><span class="up">↑ 8.2% available</span></div>
+<div class="card"><div class="symbol">🛣️</div><p>Active Trips</p><h2 id="trips">185</h2><span class="up">↑ 5.4% this week</span></div>
+<div class="card"><div class="symbol">⏱️</div><p>Average Waiting</p><h2 id="waiting">5 min</h2><span class="up">↓ Improved</span></div>
+</div>
+
+<div class="grid">
+<div class="panel">
+<h3>📊 Weekly Taxi Demand</h3>
+<div class="chart-box"><canvas id="mainChart"></canvas></div>
+</div>
+<div class="panel">
+<h3>📍 Popular Locations</h3>
+<div class="location"><div class="loc-head"><span>Manhattan</span><span>90%</span></div><div class="track"><div class="fill" style="width:90%"></div></div></div>
+<div class="location"><div class="loc-head"><span>Brooklyn</span><span>65%</span></div><div class="track"><div class="fill" style="width:65%"></div></div></div>
+<div class="location"><div class="loc-head"><span>Queens</span><span>35%</span></div><div class="track"><div class="fill" style="width:35%"></div></div></div>
+<div class="location"><div class="loc-head"><span>Bronx</span><span>55%</span></div><div class="track"><div class="fill" style="width:55%"></div></div></div>
+</div>
+</div>
+
+<div class="panel">
+<h3>Recent Activity</h3>
+<div class="table-wrap">
+<table>
+<tr><th>Booking ID</th><th>Pickup</th><th>Destination</th><th>Fare</th><th>Status</th></tr>
+<tr><td>#TX101</td><td>Manhattan</td><td>Brooklyn</td><td>$25</td><td><span class="tag">Completed</span></td></tr>
+<tr><td>#TX102</td><td>Queens</td><td>Bronx</td><td>$18</td><td><span class="tag pending">Ongoing</span></td></tr>
+<tr><td>#TX103</td><td>Brooklyn</td><td>Manhattan</td><td>$32</td><td><span class="tag">Completed</span></td></tr>
+</table>
+</div>
+<button class="btn" onclick="navigateByName('bookings')">View All Bookings →</button>
+</div>
+</section>
+
+<!-- DEMAND PAGE -->
+<section class="page" id="demand">
+<div class="page-heading">
+<h2>Demand Analysis</h2>
+<p>Understand taxi demand patterns and peak hours.</p>
+</div>
+<div class="stats">
+<div class="card"><p>Total Demand</p><h2>1,250</h2><span class="up">+12.5%</span></div>
+<div class="card"><p>Peak Hour</p><h2>6 PM</h2><span class="down">High demand</span></div>
+<div class="card"><p>Peak Zone</p><h2>450</h2><span class="up">Manhattan</span></div>
+<div class="card"><p>Low Demand</p><h2>120</h2><span class="down">Queens</span></div>
+</div>
+<div class="panel">
+<h3>Hourly Demand Pattern</h3>
+<div class="chart-box"><canvas id="hourChart"></canvas></div>
+</div>
+<div class="panel">
+<h3>Demand Insights</h3>
+<p style="color:#aaa;line-height:2;font-size:14px">
+• Evening hours show higher taxi demand.<br>
+• Manhattan has the highest number of requests.<br>
+• Queens shows comparatively lower demand.<br>
+• Taxi allocation can be improved using demand analysis.
+</p>
+</div>
+</section>
+
+<!-- LOCATIONS PAGE -->
+<section class="page" id="locations">
+<div class="page-heading">
+<h2>Taxi Locations</h2>
+<p>Location-wise taxi availability and demand information.</p>
+</div>
+<div class="zone-grid">
+<div class="zone"><h3>📍 Manhattan</h3><strong>450</strong><p>High demand | 95 taxis available</p></div>
+<div class="zone"><h3>📍 Brooklyn</h3><strong>280</strong><p>Medium demand | 85 taxis available</p></div>
+<div class="zone"><h3>📍 Queens</h3><strong>120</strong><p>Low demand | 75 taxis available</p></div>
+<div class="zone"><h3>📍 Bronx</h3><strong>210</strong><p>Medium demand | 65 taxis available</p></div>
+</div>
+<div class="panel" style="margin-top:20px">
+<h3>Location Monitoring</h3>
+<p style="color:#999;line-height:2;font-size:14px">
+Manhattan – High taxi demand<br>
+Brooklyn – Moderate taxi demand<br>
+Queens – Low taxi demand<br>
+Bronx – Moderate taxi demand
+</p>
+</div>
+</section>
+
+<!-- BOOKINGS PAGE -->
+<section class="page" id="bookings">
+<div class="page-heading">
+<h2>Taxi Bookings</h2>
+<p>View and monitor all taxi booking records.</p>
+</div>
+<div class="stats">
+<div class="card"><p>Total Bookings</p><h2>1,250</h2></div>
+<div class="card"><p>Completed</p><h2>980</h2></div>
+<div class="card"><p>Ongoing</p><h2>185</h2></div>
+<div class="card"><p>Pending</p><h2>85</h2></div>
+</div>
+<div class="panel">
+<h3>All Booking Details</h3>
+<div class="table-wrap">
+<table>
+<tr><th>ID</th><th>Customer</th><th>Pickup</th><th>Destination</th><th>Fare</th><th>Status</th></tr>
+<tr><td>TX101</td><td>Customer 01</td><td>Manhattan</td><td>Brooklyn</td><td>$25</td><td><span class="tag">Completed</span></td></tr>
+<tr><td>TX102</td><td>Customer 02</td><td>Queens</td><td>Bronx</td><td>$18</td><td><span class="tag pending">Ongoing</span></td></tr>
+<tr><td>TX103</td><td>Customer 03</td><td>Brooklyn</td><td>Manhattan</td><td>$32</td><td><span class="tag">Completed</span></td></tr>
+<tr><td>TX104</td><td>Customer 04</td><td>Bronx</td><td>Queens</td><td>$20</td><td><span class="tag pending">Ongoing</span></td></tr>
+<tr><td>TX105</td><td>Customer 05</td><td>Manhattan</td><td>Queens</td><td>$28</td><td><span class="tag">Completed</span></td></tr>
+</table>
+</div>
+</div>
+</section>
+
+<!-- REPORTS PAGE -->
+<section class="page" id="reports">
+<div class="page-heading">
+<h2>Analytics Reports</h2>
+<p>Summary of taxi demand and mobility performance.</p>
+</div>
+<div class="report-grid">
+<div class="report"><h3>📊 Demand Report</h3><p>Total taxi requests: 1,250. Manhattan records the highest demand.</p></div>
+<div class="report"><h3>🚕 Availability Report</h3><p>320 taxis are currently shown as available in the sample dataset.</p></div>
+<div class="report"><h3>⏱️ Waiting Time Report</h3><p>Average passenger waiting time is 5 minutes in this demo.</p></div>
+<div class="report"><h3>📈 Performance Report</h3><p>Booking and demand trends can help improve taxi allocation.</p></div>
+</div>
+<div class="panel" style="margin-top:20px">
+<h3>Overall Performance</h3>
+<div class="chart-box"><canvas id="reportChart"></canvas></div>
+</div>
+</section>
+
+<footer>© 2026 TaxiFlow Analytics | Mini Project</footer>
+
+</main>
+</div>
+
+<script>
+
+// PAGE NAVIGATION WITH LOADING SCREEN
+
+let currentPage = 'dashboard';
+let mainChart, hourChart, reportChart;
+
+const titles = {
+dashboard:'Dashboard Overview',
+demand:'Demand Analysis',
+locations:'Taxi Locations',
+bookings:'Taxi Bookings',
+reports:'Analytics Reports'
+};
+
+function navigate(page, button) {
+
+if(page === currentPage) return;
+
+const loader = document.getElementById('loader');
+loader.style.display = 'flex';
+
+document.querySelectorAll('.nav button').forEach(b=>{
+b.classList.remove('active');
+});
+
+if(button) button.classList.add('active');
+else {
+document.querySelectorAll('.nav button').forEach(b=>{
+if(b.dataset.page === page) b.classList.add('active');
+});
+}
+
+setTimeout(()=>{
+
+document.querySelectorAll('.page').forEach(p=>{
+p.classList.remove('active');
+});
+
+document.getElementById(page).classList.add('active');
+
+document.getElementById('pageTitle').innerText = titles[page];
+
+currentPage = page;
+loader.style.display = 'none';
+
+if(page === 'demand') createChart('hourChart','bar');
+if(page === 'reports') createChart('reportChart','doughnut');
+
+},650);
+
+}
+
+function navigateByName(page){
+navigate(page);
+}
+
+// CHART GENERATOR
+
+function createChart(id,type){
+
+if(id === 'hourChart' && hourChart) return;
+if(id === 'reportChart' && reportChart) return;
+
+const chart = new Chart(document.getElementById(id),{
+type:type,
+data:{
+labels:type === 'bar' ?
+['6 AM','8 AM','10 AM','12 PM','2 PM','4 PM','6 PM','8 PM'] :
+['Completed','Ongoing','Pending'],
+datasets:[{
+label:'Taxi Analytics',
+data:type === 'bar' ?
+[120,220,180,350,280,420,500,390] :
+[980,185,85],
+backgroundColor:['#38bdf8','#8b5cf6','#f59e0b'],
+borderColor:'#101010',
+borderWidth:2,
+tension:.4
+}]
+},
+options:{
+responsive:true,
+maintainAspectRatio:false,
+plugins:{
+legend:{labels:{color:'#ccc'}}
+},
+scales:type === 'doughnut' ? {} : {
+x:{ticks:{color:'#999'},grid:{color:'#252525'}},
+y:{ticks:{color:'#999'},grid:{color:'#252525'},beginAtZero:true}
+}
+}
+});
+
+if(id === 'hourChart') hourChart=chart;
+if(id === 'reportChart') reportChart=chart;
+}
+
+// DASHBOARD CHART
+
+mainChart = new Chart(document.getElementById('mainChart'),{
+type:'line',
+data:{
+labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+datasets:[{
+label:'Taxi Requests',
+data:[150,230,190,320,280,450,390],
+borderColor:'#38bdf8',
+backgroundColor:'rgba(56,189,248,.12)',
+fill:true,
+tension:.4,
+borderWidth:3,
+pointBackgroundColor:'#38bdf8'
+}]
+},
+options:{
+responsive:true,
+maintainAspectRatio:false,
+plugins:{legend:{labels:{color:'#ccc'}}},
+scales:{
+x:{ticks:{color:'#999'},grid:{color:'#252525'}},
+y:{beginAtZero:true,ticks:{color:'#999'},grid:{color:'#252525'}}
+}
+}
+});
+
+// LIVE CLOCK
+
+function clock(){
+document.getElementById('clock').innerText =
+new Date().toLocaleTimeString();
+}
+clock();
+setInterval(clock,1000);
+
+</script>
+</body>
+</html>
